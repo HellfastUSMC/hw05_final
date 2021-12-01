@@ -5,7 +5,7 @@ from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 
 from . import forms
-from .models import Following, Group, Post
+from .models import Follow, Group, Post
 
 User = get_user_model()
 
@@ -163,7 +163,7 @@ def follow_index(request):
     page_obj = paginator.get_page(page_number)
     subs = [author for author in request.user.following.all()]
     print('!!! -', subs)
-    print(request.user.follower.all(), request.user.following.all(), Following.objects.filter(author))
+    print(request.user.follower.all(), request.user.following.all(), Follow.objects.filter(author))
     context = {
         'page_obj': page_obj,
         'title': title,
@@ -175,12 +175,12 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
     author = User.objects.get(username=username)
-    Following.objects.create(user=request.user, author=author)
+    Follow.objects.create(user=request.user, author=author)
     return redirect('posts:profile', username=username)
 
 
 @login_required
 def profile_unfollow(request, username):
     author = User.objects.get(username=username)
-    Following.objects.filter(user=request.user, author=author).delete()
+    Follow.objects.filter(user=request.user, author=author).delete()
     return redirect('posts:profile', username=username)
