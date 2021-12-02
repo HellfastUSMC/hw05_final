@@ -153,8 +153,8 @@ LOGIN_REDIRECT_URL = 'posts:index'
 
 POSTS_ON_PAGE = 10
 
-'''CACHES = {
+CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
     }
-}'''
+}

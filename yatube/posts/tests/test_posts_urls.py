@@ -90,7 +90,7 @@ class TestU(TestCase):
         response = self.client.get(reverse('posts:post_create'))
         self.assertRedirects(
             response,
-            '/auth/login/?next=/create/'
+            reverse('users:login') + '?next=' + reverse('posts:post_create')
         )
 
         response = self.client.get(
@@ -116,4 +116,11 @@ class TestU(TestCase):
                 'posts:post_detail',
                 kwargs={'post_id': f'{self.post.pk}'}
             )
+        )
+
+    def test_posts_subs(self):
+        response = self.client.get(reverse('posts:follow_index'))
+        self.assertRedirects(
+            response,
+            reverse('users:login') + '?next=' + reverse('posts:follow_index')
         )

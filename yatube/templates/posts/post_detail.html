@@ -13,7 +13,7 @@
               <li class="list-group-item">
                 Группа: {{ group }}
                 <a href="{% url 'posts:group_list' group.slug %}">
-                  все записи группы
+                  Все записи группы
                 </a>
               </li>
               {% endif %}
@@ -25,13 +25,13 @@
             </li>
             <li class="list-group-item">
               <a href="{% url 'posts:profile' username %}">
-                все посты пользователя
+                Все посты пользователя
               </a>
             </li>
             {% if request.user == post_author %}
               <li class="list-group-item">
                 <a href="{% url 'posts:post_edition' post_id %}">
-                  редактировать пост
+                  Редактировать пост
                 </a>
               </li>
           {% endif %}

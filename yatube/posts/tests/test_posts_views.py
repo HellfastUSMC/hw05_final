@@ -5,7 +5,7 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.core.cache import cache
 
-from ..models import Post, Group
+from ..models import Post, Group, Follow
 
 user = get_user_model()
 
@@ -18,10 +18,16 @@ class TestV(TestCase):
         cls.cl = Client()
         cls.user = user.objects.create_user(username='VUser')
         cls.user_2 = user.objects.create_user(username='VAnotherUser')
+        cls.user_3 = user.objects.create_user(username='VSubUser')
         cls.group = Group.objects.create(
             title='VTestGroup',
             slug='VTG',
             description='VDESC'
+        )
+
+        cls.post_for_subs = Post.objects.create(
+            author=cls.user_3,
+            text='SUB!',
         )
 
         for i in range(10):
@@ -44,11 +50,17 @@ class TestV(TestCase):
         cls.auth_another = Client()
         cls.auth_another.force_login(TestV.user_2)
 
+        cls.sub = Follow.objects.create(
+            user=cls.user,
+            author=cls.user_3
+        )
+
         cls.post12 = Post.objects.create(
             author=cls.user,
             text='V TEST POST ' * 3,
             group=cls.group,
         )
+
         cls.templates = {
             reverse('posts:index'): 'posts/index.html',
             reverse('posts:group_list',
@@ -101,7 +113,7 @@ class TestV(TestCase):
         )
 
         response = self.auth_cl.get(reverse('posts:index') + '?page=2')
-        self.assertEqual(len(response.context['page_obj'].object_list), 3)
+        self.assertEqual(len(response.context['page_obj'].object_list), 4)
 
     def test_views_paginator_and_post_object_group_page(self):
         response = self.auth_cl.get(
@@ -199,3 +211,27 @@ class TestV(TestCase):
     def test_posts_index_page_cache(self):
         self.client.get(reverse('posts:index'))
         self.assertTrue(cache._expire_info)
+
+    def test_posts_subscribe(self):
+        self.auth_cl.get(reverse('posts:profile_follow', kwargs={'username': f'{self.user_2.username}'}))
+        self.assertTrue(Follow.objects.filter(user=self.user, author=self.user_2), 'Подписка не добавлена!')
+        self.auth_cl.get(reverse('posts:profile_unfollow', kwargs={'username': f'{self.user_2.username}'}))
+        self.assertTrue(not Follow.objects.filter(user=self.user, author=self.user_2), 'Подписка не удалена!')
+        response = self.client.get(reverse('posts:profile_follow', kwargs={'username': f'{self.user_2.username}'}))
+        self.assertRedirects(
+            response,
+            reverse('users:login') + '?next=' + reverse('posts:profile_follow', kwargs={'username': f'{self.user_2.username}'}),
+        )
+
+    def test_posts_subscribe_posts(self):
+        response = self.auth_cl.get(reverse('posts:follow_index'))
+        post_el_on_subs = response.context.get('page_obj')[0]
+        self.assertEqual(
+            self.post_for_subs.pk,
+            post_el_on_subs.pk,
+            'Пост на странице подписок неверный!'
+        )
+
+        response = self.auth_another.get(reverse('posts:follow_index'))
+        post_el_on_subs = len(response.context.get('page_obj'))
+        self.assertEqual(post_el_on_subs, 0)

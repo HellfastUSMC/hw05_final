@@ -56,11 +56,12 @@ def profile(request, username):
     user_name = f'{user_c.first_name} {user_c.last_name}'
     title = f'Профайл пользователя {user_name}'
     same = False
-    if request.user == user_c:
-        same = True
     following = False
-    if Follow.objects.filter(user=request.user).filter(author=user_c):
-        following = True
+    if request.user.is_authenticated:
+        if request.user == user_c:
+            same = True
+        if Follow.objects.filter(user=request.user).filter(author=user_c):
+            following = True
     context = {
         'title': title,
         'page_obj': page_obj,
@@ -177,7 +178,6 @@ def follow_index(request):
 def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
     is_follower = Follow.objects.filter(user=request.user, author=author)
-    print('IS FOLLOWER', is_follower, 'QSET', request.user.following.all())
     if author == request.user or is_follower:
         return redirect('posts:profile', username=username)
     else:
