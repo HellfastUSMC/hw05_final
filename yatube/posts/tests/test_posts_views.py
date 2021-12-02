@@ -213,14 +213,40 @@ class TestV(TestCase):
         self.assertTrue(cache._expire_info)
 
     def test_posts_subscribe(self):
-        self.auth_cl.get(reverse('posts:profile_follow', kwargs={'username': f'{self.user_2.username}'}))
-        self.assertTrue(Follow.objects.filter(user=self.user, author=self.user_2), 'Подписка не добавлена!')
-        self.auth_cl.get(reverse('posts:profile_unfollow', kwargs={'username': f'{self.user_2.username}'}))
-        self.assertTrue(not Follow.objects.filter(user=self.user, author=self.user_2), 'Подписка не удалена!')
-        response = self.client.get(reverse('posts:profile_follow', kwargs={'username': f'{self.user_2.username}'}))
+        self.auth_cl.get(
+            reverse(
+                'posts:profile_follow',
+                kwargs={'username': f'{self.user_2.username}'}
+            )
+        )
+        self.assertTrue(
+            Follow.objects.filter(user=self.user, author=self.user_2),
+            'Подписка не добавлена!'
+        )
+        self.auth_cl.get(
+            reverse(
+                'posts:profile_unfollow',
+                kwargs={'username': f'{self.user_2.username}'}
+            )
+        )
+        self.assertTrue(
+            not Follow.objects.filter(user=self.user, author=self.user_2),
+            'Подписка не удалена!'
+        )
+        response = self.client.get(
+            reverse(
+                'posts:profile_follow',
+                kwargs={'username': f'{self.user_2.username}'}
+            )
+        )
         self.assertRedirects(
             response,
-            reverse('users:login') + '?next=' + reverse('posts:profile_follow', kwargs={'username': f'{self.user_2.username}'}),
+            reverse('users:login')
+            + '?next='
+            + reverse(
+                'posts:profile_follow',
+                kwargs={'username': f'{self.user_2.username}'}
+            ),
         )
 
     def test_posts_subscribe_posts(self):
