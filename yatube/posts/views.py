@@ -55,11 +55,12 @@ def profile(request, username):
     posts_total = posts.count()
     user_name = f'{user_c.first_name} {user_c.last_name}'
     title = f'Профайл пользователя {user_name}'
+    same = False
+    if request.user == user_c:
+        same = True
     following = False
-    print(request.user.following.filter(), request.user.username)
-    for author in request.user.following.all():
-        if user_c == User.objects.get(username=author):
-            following = True
+    if Follow.objects.filter(user=request.user).filter(author=user_c):
+        following = True
     context = {
         'title': title,
         'page_obj': page_obj,
@@ -67,6 +68,7 @@ def profile(request, username):
         'user_name': user_name,
         'author': user_c,
         'following': following,
+        'same': same,
     }
     return render(request, template, context)
 
@@ -157,13 +159,12 @@ def follow_index(request):
     template = 'posts/follow.html'
     page_title = 'Лента подписок'
     title = 'Лента подписок'
-    posts = Post.objects.order_by('-pub_date').filter(author=request.user)
+    subs = [author['author_id'] for author in Follow.objects.filter(
+        user=request.user).values('author_id')]
+    posts = Post.objects.order_by('-pub_date').filter(author_id__in=subs)
     paginator = Paginator(posts, settings.POSTS_ON_PAGE)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    subs = [author for author in request.user.following.all()]
-    print('!!! -', subs)
-    print(request.user.follower.all(), request.user.following.all(), Follow.objects.filter(author))
     context = {
         'page_obj': page_obj,
         'title': title,
@@ -174,9 +175,14 @@ def follow_index(request):
 
 @login_required
 def profile_follow(request, username):
-    author = User.objects.get(username=username)
-    Follow.objects.create(user=request.user, author=author)
-    return redirect('posts:profile', username=username)
+    author = get_object_or_404(User, username=username)
+    is_follower = Follow.objects.filter(user=request.user, author=author)
+    print('IS FOLLOWER', is_follower, 'QSET', request.user.following.all())
+    if author == request.user or is_follower:
+        return redirect('posts:profile', username=username)
+    else:
+        Follow.objects.create(user=request.user, author=author)
+        return redirect('posts:profile', username=username)
 
 
 @login_required
