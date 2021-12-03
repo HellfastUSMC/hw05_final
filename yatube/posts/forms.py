@@ -12,8 +12,8 @@ class PostForm(forms.ModelForm):
         fields = ['text', 'group', 'image']
         exclude = ('author',)
         labels = {
-            "text": 'Текст поста',
-            "group": "Группа поста"
+            'text': 'Текст поста',
+            'group': 'Группа поста'
         }
         help_texts = {
             'text': 'Введите текст поста в поле выше',
@@ -27,7 +27,7 @@ class CommentForm(forms.ModelForm):
         fields = ['text', ]
         exclude = ('author', 'post', )
         labels = {
-            "text": 'Текст комментария',
+            'text': 'Текст комментария',
         }
         help_texts = {
             'text': 'Введите текст комментария в поле выше',

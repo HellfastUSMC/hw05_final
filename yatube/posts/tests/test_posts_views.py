@@ -1,9 +1,10 @@
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
+from django.core.cache.utils import make_template_fragment_key
 from django.test import TestCase, Client
 from django.urls import reverse
-from django.core.cache import cache
 
 from ..models import Post, Group, Follow
 
@@ -83,6 +84,9 @@ class TestV(TestCase):
             'text': forms.CharField,
             'image': forms.ImageField,
         }
+
+        cls.cache_key = 'TestKey1'
+        cls.cache_val = 'TestVal1'
 
     def post_check(self, response, is_post):
         if not is_post:
@@ -208,9 +212,26 @@ class TestV(TestCase):
                     f_type
                 )
 
+    def test_cache(self):
+        cache.set(self.cache_key, self.cache_val)
+        self.assertEqual(
+            cache.get(self.cache_key),
+            self.cache_val,
+            'Кэш не работает!'
+        )
+        cache.clear()
+        self.assertTrue(not cache.get(self.cache_key), 'Кэш не работает!')
+        cache.clear()
+
     def test_posts_index_page_cache(self):
         self.client.get(reverse('posts:index'))
-        self.assertTrue(cache._expire_info)
+        key = make_template_fragment_key('index_page')
+        self.assertTrue(cache.get(key), 'Главная страница не закэшировалась!')
+        cache.clear()
+        self.assertTrue(
+            not cache.get(key),
+            'Главная страница осталась в кэше!'
+        )
 
     def test_posts_subscribe(self):
         self.auth_cl.get(
@@ -220,9 +241,11 @@ class TestV(TestCase):
             )
         )
         self.assertTrue(
-            Follow.objects.filter(user=self.user, author=self.user_2),
+            Follow.objects.filter(user=self.user, author=self.user_2).exists(),
             'Подписка не добавлена!'
         )
+
+    def test_posts_unsubscribe(self):
         self.auth_cl.get(
             reverse(
                 'posts:profile_unfollow',
@@ -230,7 +253,10 @@ class TestV(TestCase):
             )
         )
         self.assertTrue(
-            not Follow.objects.filter(user=self.user, author=self.user_2),
+            not Follow.objects.filter(
+                user=self.user,
+                author=self.user_2
+            ).exists(),
             'Подписка не удалена!'
         )
         response = self.client.get(

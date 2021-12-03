@@ -14,7 +14,7 @@ def index(request):
     template = 'posts/index.html'
     page_title = 'Главная страница Yatube'
     title = 'Последние обновления на сайте'
-    posts = Post.objects.order_by('-pub_date')
+    posts = Post.objects.select_related('group').order_by('-pub_date')
     paginator = Paginator(posts, settings.POSTS_ON_PAGE)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -22,6 +22,7 @@ def index(request):
         'page_obj': page_obj,
         'title': title,
         'page_title': page_title,
+        'index': True,
     }
     return render(request, template, context)
 
@@ -55,12 +56,11 @@ def profile(request, username):
     posts_total = posts.count()
     user_name = f'{user_c.first_name} {user_c.last_name}'
     title = f'Профайл пользователя {user_name}'
-    same = False
     following = False
     if request.user.is_authenticated:
-        if request.user == user_c:
-            same = True
-        if Follow.objects.filter(user=request.user).filter(author=user_c):
+        if Follow.objects.filter(
+            user=request.user
+        ).filter(author=user_c).exists():
             following = True
     context = {
         'title': title,
@@ -69,7 +69,6 @@ def profile(request, username):
         'user_name': user_name,
         'author': user_c,
         'following': following,
-        'same': same,
     }
     return render(request, template, context)
 
@@ -160,9 +159,10 @@ def follow_index(request):
     template = 'posts/follow.html'
     page_title = 'Лента подписок'
     title = 'Лента подписок'
-    subs = [author['author_id'] for author in Follow.objects.filter(
-        user=request.user).values('author_id')]
-    posts = Post.objects.order_by('-pub_date').filter(author_id__in=subs)
+    subs = request.user.follower.all().values('author_id')
+    posts = Post.objects.select_related(
+        'author'
+    ).order_by('-pub_date').filter(author__in=subs)
     paginator = Paginator(posts, settings.POSTS_ON_PAGE)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -170,6 +170,7 @@ def follow_index(request):
         'page_obj': page_obj,
         'title': title,
         'page_title': page_title,
+        'follow': True,
     }
     return render(request, template, context)
 
@@ -177,16 +178,15 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
-    is_follower = Follow.objects.filter(user=request.user, author=author)
-    if author == request.user or is_follower:
+    if author == request.user:
         return redirect('posts:profile', username=username)
     else:
-        Follow.objects.create(user=request.user, author=author)
+        Follow.objects.get_or_create(user=request.user, author=author)
         return redirect('posts:profile', username=username)
 
 
 @login_required
 def profile_unfollow(request, username):
-    author = User.objects.get(username=username)
+    author = get_object_or_404(User, username=username)
     Follow.objects.filter(user=request.user, author=author).delete()
     return redirect('posts:profile', username=username)
