@@ -159,10 +159,7 @@ def follow_index(request):
     template = 'posts/follow.html'
     page_title = 'Лента подписок'
     title = 'Лента подписок'
-    subs = request.user.follower.all().values('author_id')
-    posts = Post.objects.select_related(
-        'author'
-    ).order_by('-pub_date').filter(author__in=subs)
+    posts = Post.objects.filter(author__following__user=request.user)
     paginator = Paginator(posts, settings.POSTS_ON_PAGE)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
